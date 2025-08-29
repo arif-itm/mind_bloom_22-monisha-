@@ -1,0 +1,156 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.35.1'
+        channel: 'stable'
+        cache: true
+        
+    - name: Install dependencies
+      run: flutter pub get
+
+  build-web:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.35.1'
+        channel: 'stable'
+        cache: true
+        
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Build Web
+      run: flutter build web --release 
+      
+    - name: Upload Web Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-build
+        path: build/web/
+
+  build-android:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.35.1'
+        channel: 'stable'
+        cache: true
+        
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Build APK
+      run: flutter build apk --release
+      
+    - name: Copy and rename APK
+      run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/mind_bloom.apk
+      
+    - name: Upload APK Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: build/app/outputs/flutter-apk/mind_bloom.apk
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-web, build-android]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/flutter')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download Web Build
+      uses: actions/download-artifact@v4
+      with:
+        name: web-build
+        path: web-build/
+        
+    - name: Download Android APK
+      uses: actions/download-artifact@v4
+      with:
+        name: android-apk
+        path: android-build/
+        
+    - name: Create Web ZIP
+      run: |
+        cd web-build
+        zip -r ../mind_bloom-web-build.zip .
+        cd ..
+        
+    - name: Generate Release Info
+      id: release_info
+      run: |
+        TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+        COMMIT_SHORT=$(git rev-parse --short HEAD)
+        TAG_NAME="build-${TIMESTAMP}-${COMMIT_SHORT}"
+        RELEASE_NAME="FinDiu Build ${TIMESTAMP}"
+        echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
+        echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release_info.outputs.TAG_NAME }}
+        name: ${{ steps.release_info.outputs.RELEASE_NAME }}
+        body: |
+          ## FinDiu Development Build
+          
+          **Branch**: ${{ github.ref_name }}  
+          **Commit**: ${{ github.sha }}  
+          **Build Time**: $(date)
+          
+          ### Downloads
+          - **Android APK**: Ready to install on Android devices
+          - **Web Build**: Extract ZIP and deploy to web server
+          
+          ### Installation
+          - **Android**: Download `mind_bloom.apk` and install
+          - **Web**: Download `mind_bloom-web-build.zip`, extract and serve
+        draft: false
+        prerelease: true
+        files: |
+          android-build/mind_bloom.apk
+          mind_bloom-web-build.zip
+        fail_on_unmatched_files: true

@@ -1,32 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class FrontScreen extends StatelessWidget {
   const FrontScreen({super.key});
 
-  // Real Google Sign-In
+  // Mock Google Sign-In (no Firebase, just navigation)
   Future<void> signInWithGoogle(BuildContext context) async {
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // user cancelled
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await FirebaseAuth.instance.signInWithCredential(credential);
-
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, '/welcome');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In failed: $e')),
-      );
+    // Simulate loading
+    await Future.delayed(const Duration(seconds: 1));
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/onboarding');
+      // or '/homepage' if you want to go straight home
     }
   }
 
@@ -67,14 +50,14 @@ class FrontScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     "Guided meditations, mood tracking, and\ncommunity support — all in one app.",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.white70),
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
                   ),
 
                   const SizedBox(height: 30),
@@ -101,7 +84,7 @@ class FrontScreen extends StatelessWidget {
                   const Text("or", style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 16),
 
-                  // **Google Login Button (Real)**
+                  // Google Login Button (Mock)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: ElevatedButton.icon(
@@ -116,7 +99,7 @@ class FrontScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.red),
                       label: const Text("Continue with Google"),
-                      onPressed: () => signInWithGoogle(context),
+                      onPressed: () => signInWithGoogle(context), // dummy
                     ),
                   ),
 
@@ -136,7 +119,7 @@ class FrontScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.apple, size: 28, color: Colors.white),
                       label: const Text("Continue with Apple"),
-                      onPressed: () {},
+                      onPressed: () {}, // inactive
                     ),
                   ),
 
@@ -161,4 +144,3 @@ class FrontScreen extends StatelessWidget {
     );
   }
 }
-

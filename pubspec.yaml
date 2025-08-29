@@ -19,9 +19,8 @@ dependencies:
   url_launcher: ^6.3.0
   lucide_icons: ^0.257.0
   image_picker: ^1.0.7
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.6.1
-  google_sign_in: ^6.2.0
+
+
 
 
 dev_dependencies:
